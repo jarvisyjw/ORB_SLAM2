@@ -55,6 +55,10 @@ ${Pangolin_LIBRARIES}
 ${PROJECT_SOURCE_DIR}/../../../Thirdparty/DBoW2/lib/libDBoW2.so
 ${PROJECT_SOURCE_DIR}/../../../Thirdparty/g2o/lib/libg2o.so
 ${PROJECT_SOURCE_DIR}/../../../lib/libORB_SLAM2.so
+/usr/local/lib/libopencv_core.so.3.2
+/usr/local/lib/libopencv_imgproc.so.3.2
+/usr/lib/x86_64-linux-gnu/libopencv_core.so.4.2.0
+/usr/lib/x86_64-linux-gnu/libopencv_imgproc.so.4.2.0
 )
 
 # Node for monocular camera
