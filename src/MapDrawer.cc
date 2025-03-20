@@ -161,7 +161,10 @@ void MapDrawer::DrawKeyFrames(const bool bDrawKF, const bool bDrawGraph)
             }
 
             // Loops
-            set<KeyFrame*> sLoopKFs = vpKFs[i]->GetLoopEdges();
+            // set<KeyFrame*> sLoopKFs = vpKFs[i]->GetLoopEdges();
+            std::tuple<set<KeyFrame*>, set<int>, vector<cv::Mat>> LoopEdges = vpKFs[i]->GetLoopEdges();
+            set<KeyFrame*> sLoopKFs = std::get<0>(LoopEdges);
+            glColor4f(0.0f,0.0f,1.0f,0.6f);  // Blue color for loop closure edges
             for(set<KeyFrame*>::iterator sit=sLoopKFs.begin(), send=sLoopKFs.end(); sit!=send; sit++)
             {
                 if((*sit)->mnId<vpKFs[i]->mnId)

@@ -90,8 +90,13 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     mpLocalMapper = new LocalMapping(mpMap, mSensor==MONOCULAR);
     mptLocalMapping = new thread(&ORB_SLAM2::LocalMapping::Run,mpLocalMapper);
 
+    bool bLoopCorrect = static_cast<int>(fsSettings["System.LoopCorrect"]) != 0;
+
+    if (!bLoopCorrect){
+        cout << "Detect Loop Only, not Correct Loop." << endl;
+    }
     //Initialize the Loop Closing thread and launch
-    mpLoopCloser = new LoopClosing(mpMap, mpKeyFrameDatabase, mpVocabulary, mSensor!=MONOCULAR);
+    mpLoopCloser = new LoopClosing(mpMap, mpKeyFrameDatabase, mpVocabulary, mSensor!=MONOCULAR, bLoopCorrect);
     mptLoopClosing = new thread(&ORB_SLAM2::LoopClosing::Run, mpLoopCloser);
 
     //Initialize the Viewer thread and launch
@@ -264,6 +269,8 @@ cv::Mat System::TrackMonocular(const cv::Mat &im, const double &timestamp)
     mTrackedMapPoints = mpTracker->mCurrentFrame.mvpMapPoints;
     mTrackedKeyPointsUn = mpTracker->mCurrentFrame.mvKeysUn;
 
+    mCurrentPosition = Tcw.clone();
+
     return Tcw;
 }
 
@@ -379,6 +386,71 @@ void System::SaveTrajectoryTUM(const string &filename)
     cout << endl << "trajectory saved!" << endl;
 }
 
+// Save LoopClosures
+void System::SaveLoopClosureEdges(const string &filename)
+{
+    cout << endl << "Saving loop closure edges to " << filename << " ..." << endl;
+
+    vector<KeyFrame*> vpKFs = mpMap->GetAllKeyFrames();
+    sort(vpKFs.begin(),vpKFs.end(),KeyFrame::lId);
+
+    ofstream f;
+    f.open(filename.c_str());
+    f << fixed;
+
+    for(size_t i=0; i<vpKFs.size(); i++)
+    {
+        KeyFrame* pKF = vpKFs[i];
+
+       // pKF->SetPose(pKF->GetPose()*Two);
+
+        if(pKF->isBad())
+            continue;
+
+        // if(pKF->GetLoopEdges().empty())
+        //     continue;
+
+        std::tuple<set<KeyFrame*>, set<int>, vector<cv::Mat>> LoopEdges = pKF->GetLoopEdges();
+        set<KeyFrame*> sLoopKFs = std::get<0>(LoopEdges);
+        set<int> sLoopMatches = std::get<1>(LoopEdges);
+        vector<cv::Mat> vLoopTransform = std::get<2>(LoopEdges);
+
+        // Check if both sets have the same size
+        if (sLoopKFs.size() != sLoopMatches.size()) {
+            std::cerr << "Warning: The sets do not match in size and may not correspond!" << endl;
+        }
+
+        // Iterator for each set
+        std::set<KeyFrame*>::iterator itKFs = sLoopKFs.begin();
+        std::set<int>::iterator itIDs = sLoopMatches.begin();
+        std::vector<cv::Mat>::iterator itTransforms = vLoopTransform.begin();
+
+        // Assuming ofstream f is already open
+        for (; itKFs != sLoopKFs.end() && itIDs != sLoopMatches.end() && itTransforms != vLoopTransform.end(); ++itKFs, ++itIDs, ++itTransforms)
+        {
+            KeyFrame* pKFi = *itKFs;
+            int id = *itIDs;
+            cv::Mat T = *itTransforms;
+            f << std::setprecision(6) << pKF->mTimeStamp << " " << pKF->mnId << " " << pKFi->mTimeStamp << " " << pKFi->mnId << " " << id << " ";
+            for (int i = 0; i < 3; ++i) {
+                for (int j = 0; j < 4; ++j) {
+                f << T.at<float>(i, j) << " ";
+                }
+            }
+            f << endl;
+        }
+
+        // for(map<set<KeyFrame*>::iterator sit=sLoopKFs.begin(), send=sLoopKFs.end(); sit!=send; sit++)
+        // {   
+        //     KeyFrame* pKFi = *sit;
+        //     f << setprecision(6) << pKF->mTimeStamp << " " << pKF->mnId << " " << pKFi->mTimeStamp << " " << pKFi->mnId << endl;
+        // }
+    }
+
+    f.close();
+    cout << endl << "loops saved!" << endl;
+
+}
 
 void System::SaveKeyFrameTrajectoryTUM(const string &filename)
 {
@@ -487,6 +559,21 @@ vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
 {
     unique_lock<mutex> lock(mMutexState);
     return mTrackedKeyPointsUn;
+}
+
+// ROS utils
+cv::Mat System::GetCurrentPosition()
+{
+    // unique_lock<mutex> lock(mMutexState);
+    return mCurrentPosition;
+}
+
+cv::Mat System::DrawCurrentFrame () {
+  return mpFrameDrawer->DrawFrame();
+}
+
+std::vector<MapPoint*> System::GetAllMapPoints() {
+  return mpMap->GetAllMapPoints();
 }
 
 } //namespace ORB_SLAM

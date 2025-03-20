@@ -35,10 +35,10 @@
 namespace ORB_SLAM2
 {
 
-LoopClosing::LoopClosing(Map *pMap, KeyFrameDatabase *pDB, ORBVocabulary *pVoc, const bool bFixScale):
+LoopClosing::LoopClosing(Map *pMap, KeyFrameDatabase *pDB, ORBVocabulary *pVoc, const bool bFixScale, const bool bCorrectLoop):
     mbResetRequested(false), mbFinishRequested(false), mbFinished(true), mpMap(pMap),
     mpKeyFrameDB(pDB), mpORBVocabulary(pVoc), mpMatchedKF(NULL), mLastLoopKFid(0), mbRunningGBA(false), mbFinishedGBA(true),
-    mbStopGBA(false), mpThreadGBA(NULL), mbFixScale(bFixScale), mnFullBAIdx(0)
+    mbStopGBA(false), mpThreadGBA(NULL), mbFixScale(bFixScale), mnFullBAIdx(0), mbCorrectLoop(bCorrectLoop)
 {
     mnCovisibilityConsistencyTh = 3;
 }
@@ -70,8 +70,14 @@ void LoopClosing::Run()
                // In the stereo/RGBD case s=1
                if(ComputeSim3())
                {
-                   // Perform loop fusion and pose graph optimization
-                   CorrectLoop();
+
+                if (mbCorrectLoop){
+                    CorrectLoop();
+                    // Perform loop fusion and pose graph optimization
+                }
+                else{
+                    // Do Nothing
+                }
                }
             }
         }       
@@ -265,6 +271,7 @@ bool LoopClosing::ComputeSim3()
         int nmatches = matcher.SearchByBoW(mpCurrentKF,pKF,vvpMapPointMatches[i]);
 
         if(nmatches<20)
+        // if(nmatches<=0)
         {
             vbDiscarded[i] = true;
             continue;
@@ -324,9 +331,11 @@ bool LoopClosing::ComputeSim3()
 
                 g2o::Sim3 gScm(Converter::toMatrix3d(R),Converter::toVector3d(t),s);
                 const int nInliers = Optimizer::OptimizeSim3(mpCurrentKF, pKF, vpMapPointMatches, gScm, 10, mbFixScale);
-
+                mScm = Converter::toCvMat(gScm);
+                
                 // If optimization is succesful stop ransacs and continue
                 if(nInliers>=20)
+                // if(nInliers>=0)
                 {
                     bMatch = true;
                     mpMatchedKF = pKF;
@@ -383,7 +392,16 @@ bool LoopClosing::ComputeSim3()
     }
 
     if(nTotalMatches>=40)
+    // if(nTotalMatches>=0)
     {
+        cout << "Loop Detected and Passed the Geometric Verification!" << endl;
+        cout << "Current KF ID: " << mpCurrentKF->mnId << endl;
+        cout << "Matched KF ID: " << mpMatchedKF->mnId << endl;
+        cout << "Total Matches: " << nTotalMatches << endl;
+        
+        mpMatchedKF->AddLoopEdge(mpCurrentKF, nTotalMatches, mScm);
+        mpCurrentKF->AddLoopEdge(mpMatchedKF, nTotalMatches, Converter::computeInverseSimTransform(mScm));
+        
         for(int i=0; i<nInitialCandidates; i++)
             if(mvpEnoughConsistentCandidates[i]!=mpMatchedKF)
                 mvpEnoughConsistentCandidates[i]->SetErase();
@@ -568,9 +586,9 @@ void LoopClosing::CorrectLoop()
 
     mpMap->InformNewBigChange();
 
-    // Add loop edge
-    mpMatchedKF->AddLoopEdge(mpCurrentKF);
-    mpCurrentKF->AddLoopEdge(mpMatchedKF);
+    // Add loop edge: TODO
+    // mpMatchedKF->AddLoopEdge(mpCurrentKF);
+    // mpCurrentKF->AddLoopEdge(mpMatchedKF);
 
     // Launch a new thread to perform Global Bundle Adjustment
     mbRunningGBA = true;

@@ -52,7 +52,7 @@ public:
 
 public:
 
-    LoopClosing(Map* pMap, KeyFrameDatabase* pDB, ORBVocabulary* pVoc,const bool bFixScale);
+    LoopClosing(Map* pMap, KeyFrameDatabase* pDB, ORBVocabulary* pVoc, const bool bFixScale, const bool bCorrectLoop);
 
     void SetTracker(Tracking* pTracker);
 
@@ -128,7 +128,13 @@ protected:
     std::vector<KeyFrame*> mvpCurrentConnectedKFs;
     std::vector<MapPoint*> mvpCurrentMatchedPoints;
     std::vector<MapPoint*> mvpLoopMapPoints;
+
+    // CorrectLoop
+    bool mbCorrectLoop;
+
     cv::Mat mScw;
+    cv::Mat mScm;
+
     g2o::Sim3 mg2oScw;
 
     long unsigned int mLastLoopKFid;

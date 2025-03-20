@@ -77,8 +77,10 @@ public:
     bool hasChild(KeyFrame* pKF);
 
     // Loop Edges
-    void AddLoopEdge(KeyFrame* pKF);
-    std::set<KeyFrame*> GetLoopEdges();
+    // void AddLoopEdge(KeyFrame* pKF);
+    // std::set<KeyFrame*> GetLoopEdges();
+    void AddLoopEdge(KeyFrame *pKF, const int nTotalMatches, const cv::Mat &mScm);
+    std::tuple<set<KeyFrame*>, set<int>, vector<cv::Mat>> GetLoopEdges();
 
     // MapPoint observation functions
     void AddMapPoint(MapPoint* pMP, const size_t &idx);
@@ -217,7 +219,11 @@ protected:
     bool mbFirstConnection;
     KeyFrame* mpParent;
     std::set<KeyFrame*> mspChildrens;
+    
+    //Detected Loop edges
     std::set<KeyFrame*> mspLoopEdges;
+    std::vector< cv::Mat > msmLoopScm;
+    std::set<int> msnLoopEdges;
 
     // Bad flags
     bool mbNotErase;

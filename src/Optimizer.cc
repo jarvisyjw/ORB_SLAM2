@@ -923,7 +923,9 @@ void Optimizer::OptimizeEssentialGraph(Map* pMap, KeyFrame* pLoopKF, KeyFrame* p
         }
 
         // Loop edges
-        const set<KeyFrame*> sLoopEdges = pKF->GetLoopEdges();
+        // const set<KeyFrame*> sLoopEdges = pKF->GetLoopEdges();
+        std::tuple<set<KeyFrame*>, set<int>, vector<cv::Mat>> LoopEdges = pKF->GetLoopEdges();
+        set<KeyFrame*> sLoopEdges = std::get<0>(LoopEdges);
         for(set<KeyFrame*>::const_iterator sit=sLoopEdges.begin(), send=sLoopEdges.end(); sit!=send; sit++)
         {
             KeyFrame* pLKF = *sit;

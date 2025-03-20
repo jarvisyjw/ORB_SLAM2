@@ -117,12 +117,22 @@ public:
     // TODO: Save/Load functions
     // SaveMap(const string &filename);
     // LoadMap(const string &filename);
+    
+    // Save Loop Edges
+    void SaveLoopClosureEdges(const string &filename);
 
     // Information from most recent processed frame
     // You can call this right after TrackMonocular (or stereo or RGBD)
     int GetTrackingState();
     std::vector<MapPoint*> GetTrackedMapPoints();
     std::vector<cv::KeyPoint> GetTrackedKeyPointsUn();
+
+    // ROS utils
+    cv::Mat GetCurrentPosition();
+    cv::Mat DrawCurrentFrame ();
+    // std::vector<MapPoint*> GetTrackedMapPoints();
+    // std::vector<cv::KeyPoint> GetTrackedKeyPointsUn();
+    std::vector<MapPoint*> GetAllMapPoints();
 
 private:
 
@@ -176,6 +186,10 @@ private:
     std::vector<MapPoint*> mTrackedMapPoints;
     std::vector<cv::KeyPoint> mTrackedKeyPointsUn;
     std::mutex mMutexState;
+    
+    // ROS utils
+    cv::Mat mCurrentPosition;
+
 };
 
 }// namespace ORB_SLAM
